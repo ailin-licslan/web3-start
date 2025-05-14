@@ -1,0 +1,2 @@
+export const ZERO_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Replace with deployed Zero address
+export const BANK_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Replace with deployed Bank address
