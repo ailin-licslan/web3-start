@@ -1,10 +1,8 @@
 // import React, { useState } from 'react';
 // import { ethers } from 'ethers';
-// //import { createWeb3Modal, defaultConfig } from '@web3modal/core';
-// import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
-//
 // import { abi as ERC20_ABI } from './abis/ERC20.json';
 // import { abi as Bank_ABI } from './abis/Bank.json';
+// import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 //
 // // Configuration
 // const TOKEN_ADDRESS = '0xYourZ0TokenAddress'; // Replace with your Z0 token contract address
@@ -59,8 +57,6 @@
 //
 // const App: React.FC = () => {
 //     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-//
-//     // @ts-ignore
 //     const [signer, setSigner] = useState<ethers.Signer | null>(null);
 //     const [account, setAccount] = useState<string>('');
 //     const [chainId, setChainId] = useState<string>('');
@@ -73,22 +69,19 @@
 //     // Initialize wallet connection
 //     const connectWallet = async () => {
 //         try {
-//             // Type the provider as an EIP-1193 provider
-//             const modalProvider = await web3Modal.getWalletProvider();
+//
+//             const { provider: modalProvider, signer: modalSigner, address, chainId: modalChainId } = await web3Modal.connect();
 //             const web3Provider = new ethers.BrowserProvider(modalProvider);
-//             const signer = await web3Provider.getSigner();
-//             const address = await signer.getAddress();
 //             const network = await web3Provider.getNetwork();
-//             const chainIdHex = ethers.hexlify(network.chainId.toString());
 //
 //             setProvider(web3Provider);
-//             setSigner(signer);
+//             setSigner(modalSigner);
 //             setAccount(address);
-//             setChainId(chainIdHex);
+//             setChainId(ethers.hexlify(network.chainId.toString()));
 //
 //             // Initialize contracts
-//             const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
-//             const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
+//             const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, modalSigner);
+//             const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, modalSigner);
 //             setTokenContract(token);
 //             setBankContract(bank);
 //
@@ -107,7 +100,6 @@
 //     };
 //
 //     // Switch chain
-//
 //     const switchChain = async (targetChainId: string) => {
 //         try {
 //             await provider?.send('wallet_switchEthereumChain', [{ chainId: targetChainId }]);
@@ -129,7 +121,6 @@
 //     };
 //
 //     // Approve bank to spend tokens
-//
 //     const approveBank = async () => {
 //         try {
 //             if (!amount) throw new Error('Enter amount');
@@ -144,7 +135,6 @@
 //     };
 //
 //     // Deposit tokens to bank
-//
 //     const depositTokens = async () => {
 //         try {
 //             if (!amount) throw new Error('Enter amount');
@@ -159,7 +149,6 @@
 //     };
 //
 //     // Withdraw tokens from bank
-//
 //     const withdrawTokens = async () => {
 //         try {
 //             if (!amount) throw new Error('Enter amount');
@@ -174,7 +163,6 @@
 //     };
 //
 //     // Transfer tokens within bank
-//
 //     const transferTokens = async () => {
 //         try {
 //             if (!amount || !recipient) throw new Error('Enter amount and recipient');

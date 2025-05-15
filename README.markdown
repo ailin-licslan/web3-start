@@ -77,7 +77,7 @@ Open `http://localhost:3000` in your browser.
 
 ## Notes
 - Ensure you have sufficient Z0 tokens in your account (minted to the first Hardhat account by default).
-- Replace "YOUR_WALLET_CONNECT_PROJECT_ID" in `WalletConnect.jsx` with your WalletConnect Project ID from `https://cloud.walletconnect.com`.
+- Replace "YOUR_WALLET_CONNECT_PROJECT_ID" in `WalletConnect.tsx` with your WalletConnect Project ID from `https://cloud.walletconnect.com`.
 - The UI uses Bootstrap for styling.
 
 ## Troubleshooting

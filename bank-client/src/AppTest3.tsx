@@ -63,8 +63,10 @@ const AppStart: React.FC = () => {
     const [chainId, setChainId] = useState<string>('');
     const [tokenContract, setTokenContract] = useState<ethers.Contract | null>(null);
     const [bankContract, setBankContract] = useState<ethers.Contract | null>(null);
-    const [amount, setAmount] = useState<string>('');
-    const [recipient, setRecipient] = useState<string>('');
+    const [depositAmount, setDepositAmount] = useState<string>(''); // 存款金额
+    const [withdrawAmount, setWithdrawAmount] = useState<string>(''); // 取款金额
+    const [transferAmount, setTransferAmount] = useState<string>(''); // 转账金额
+    const [recipient, setRecipient] = useState<string>(''); // 收款地址
     const [error, setError] = useState<string>('');
 
     const { open } = useWeb3Modal();
@@ -75,16 +77,10 @@ const AppStart: React.FC = () => {
     // 初始化钱包连接
     const connectWallet = async () => {
         try {
-            // 打开 Web3Modal 模态框
             await open();
-
-            debugger
-            // 检查是否成功连接
             if (!isConnected || !walletProvider) {
                 throw new Error('用户取消了钱包连接或未选择钱包');
             }
-
-            // 确保 walletProvider 是有效的 EIP-1193 提供者
             if (typeof walletProvider.request !== 'function') {
                 throw new Error('无效的钱包提供者');
             }
@@ -92,15 +88,12 @@ const AppStart: React.FC = () => {
             const web3Provider = new ethers.BrowserProvider(walletProvider);
             const signer = await web3Provider.getSigner();
             const address = await signer.getAddress();
-            // @ts-ignore
-            const network = await web3Provider.getNetwork();
 
-            // 使用 modalChainId 作为链 ID（字符串类型），避免 getNetwork 失败
             if (!modalChainId) {
                 throw new Error('无法获取链 ID');
             }
 
-            const chainIdHex = modalChainId; // 直接使用 modalChainId，无需 ethers.hexlify
+            const chainIdHex = modalChainId;
 
             setProvider(web3Provider);
             setSigner(signer);
@@ -108,13 +101,11 @@ const AppStart: React.FC = () => {
             // @ts-ignore
             setChainId(chainIdHex);
 
-            // 初始化合约
             const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
             const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
             setTokenContract(token);
             setBankContract(bank);
 
-            // 处理账户和链的变化
             // @ts-ignore
             walletProvider.on('accountsChanged', (accounts: string[]) => {
                 setAccount(accounts[0] || '');
@@ -167,11 +158,10 @@ const AppStart: React.FC = () => {
     // 授权银行使用 token
     const approveBank = async () => {
         try {
-            if (!amount) throw new Error('请输入金额');
-            const tx = await tokenContract?.approve(BANK_ADDRESS, ethers.parseEther(amount));
+            if (!depositAmount) throw new Error('请输入存款金额');
+            const tx = await tokenContract?.approve(BANK_ADDRESS, ethers.parseEther(depositAmount));
             await tx.wait();
             alert('授权成功');
-            setAmount('');
         } catch (err: any) {
             setError('授权失败: ' + err.message);
             console.error(err);
@@ -181,11 +171,11 @@ const AppStart: React.FC = () => {
     // 存款到银行
     const depositTokens = async () => {
         try {
-            if (!amount) throw new Error('请输入金额');
-            const tx = await bankContract?.deposit(ethers.parseEther(amount));
+            if (!depositAmount) throw new Error('请输入存款金额');
+            const tx = await bankContract?.deposit(ethers.parseEther(depositAmount));
             await tx.wait();
             alert('存款成功');
-            setAmount('');
+            setDepositAmount('');
         } catch (err: any) {
             setError('存款失败: ' + err.message);
             console.error(err);
@@ -195,11 +185,11 @@ const AppStart: React.FC = () => {
     // 从银行取款
     const withdrawTokens = async () => {
         try {
-            if (!amount) throw new Error('请输入金额');
-            const tx = await bankContract?.withdraw(ethers.parseEther(amount));
+            if (!withdrawAmount) throw new Error('请输入取款金额');
+            const tx = await bankContract?.withdraw(ethers.parseEther(withdrawAmount));
             await tx.wait();
             alert('取款成功');
-            setAmount('');
+            setWithdrawAmount('');
         } catch (err: any) {
             setError('取款失败: ' + err.message);
             console.error(err);
@@ -209,11 +199,11 @@ const AppStart: React.FC = () => {
     // 在银行内转账
     const transferTokens = async () => {
         try {
-            if (!amount || !recipient) throw new Error('请输入金额和收款地址');
-            const tx = await bankContract?.transfer(recipient, ethers.parseEther(amount));
+            if (!transferAmount || !recipient) throw new Error('请输入转账金额和收款地址');
+            const tx = await bankContract?.transfer(recipient, ethers.parseEther(transferAmount));
             await tx.wait();
             alert('转账成功');
-            setAmount('');
+            setTransferAmount('');
             setRecipient('');
         } catch (err: any) {
             setError('转账失败: ' + err.message);
@@ -222,86 +212,112 @@ const AppStart: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4">
-            <h1 className="text-3xl font-bold mb-6">Z0 Bank DApp</h1>
+        <div className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center p-6">
+            <h1 className="text-4xl font-extrabold text-white mb-8 drop-shadow-lg">Z0 Bank DApp</h1>
 
             {/* 钱包连接 */}
             {!account ? (
                 <button
                     onClick={connectWallet}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
                 >
                     连接钱包
                 </button>
             ) : (
-                <div className="flex flex-col items-center space-y-4">
-                    <p>已连接: {account.slice(0, 6)}...{account.slice(-4)}</p>
+                <div className="w-full max-w-md space-y-6">
+                    {/* 账户信息 */}
+                    <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg shadow-md">
+                        <p className="text-gray-200 text-center">
+                            已连接: {account.slice(0, 6)}...{account.slice(-4)}
+                        </p>
+                        <select
+                            value={chainId}
+                            onChange={(e) => switchChain(e.target.value)}
+                            className="mt-2 w-full bg-gray-800 text-gray-200 p-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        >
+                            {CHAINS.map(chain => (
+                                <option key={chain.chainId} value={chain.chainId}>
+                                    {chain.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                    {/* 链选择 */}
-                    <select
-                        value={chainId}
-                        onChange={(e) => switchChain(e.target.value)}
-                        className="bg-gray-800 text-white p-2 rounded"
-                    >
-                        {CHAINS.map(chain => (
-                            <option key={chain.chainId} value={chain.chainId}>
-                                {chain.name}
-                            </option>
-                        ))}
-                    </select>
+                    {/* 存款和授权 */}
+                    <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg shadow-md">
+                        <h2 className="text-lg font-semibold text-gray-200 mb-3">存款</h2>
+                        <input
+                            type="text"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            placeholder="存款金额 (Z0)"
+                            className="w-full bg-gray-800 text-gray-200 p-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all mb-3"
+                        />
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={approveBank}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+                            >
+                                授权银行
+                            </button>
+                            <button
+                                onClick={depositTokens}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+                            >
+                                存款
+                            </button>
+                        </div>
+                    </div>
 
-                    {/* 金额输入 */}
-                    <input
-                        type="text"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="金额 (Z0)"
-                        className="bg-gray-800 text-white p-2 rounded w-64"
-                    />
+                    {/* 取款 */}
+                    <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg shadow-md">
+                        <h2 className="text-lg font-semibold text-gray-200 mb-3">取款</h2>
+                        <input
+                            type="text"
+                            value={withdrawAmount}
+                            onChange={(e) => setWithdrawAmount(e.target.value)}
+                            placeholder="取款金额 (Z0)"
+                            className="w-full bg-gray-800 text-gray-200 p-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all mb-3"
+                        />
+                        <button
+                            onClick={withdrawTokens}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+                        >
+                            取款
+                        </button>
+                    </div>
 
-                    {/* 授权按钮 */}
-                    <button
-                        onClick={approveBank}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        授权银行
-                    </button>
-
-                    {/* 存款按钮 */}
-                    <button
-                        onClick={depositTokens}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        存款
-                    </button>
-
-                    {/* 取款按钮 */}
-                    <button
-                        onClick={withdrawTokens}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        取款
-                    </button>
-
-                    {/* 转账部分 */}
-                    <div className="flex flex-col items-center space-y-2">
+                    {/* 转账 */}
+                    <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg shadow-md">
+                        <h2 className="text-lg font-semibold text-gray-200 mb-3">转账</h2>
+                        <input
+                            type="text"
+                            value={transferAmount}
+                            onChange={(e) => setTransferAmount(e.target.value)}
+                            placeholder="转账金额 (Z0)"
+                            className="w-full bg-gray-800 text-gray-200 p-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all mb-3"
+                        />
                         <input
                             type="text"
                             value={recipient}
                             onChange={(e) => setRecipient(e.target.value)}
                             placeholder="收款地址"
-                            className="bg-gray-800 text-white p-2 rounded w-64"
+                            className="w-full bg-gray-800 text-gray-200 p-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all mb-3"
                         />
                         <button
                             onClick={transferTokens}
-                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
                         >
                             转账
                         </button>
                     </div>
 
                     {/* 错误信息 */}
-                    {error && <p className="text-red-500">{error}</p>}
+                    {error && (
+                        <div className="bg-red-500 bg-opacity-20 p-3 rounded-lg text-red-300 text-center">
+                            {error}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

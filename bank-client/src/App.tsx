@@ -60,6 +60,7 @@ const web3Modal = createWeb3Modal({
 const App: React.FC = () => {
 
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+    // @ts-ignore
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
     const [account, setAccount] = useState<string>('');
     const [chainId, setChainId] = useState<string>('');
@@ -72,6 +73,7 @@ const App: React.FC = () => {
     // 初始化钱包连接
     const connectWallet = async () => {
         try {
+
             const modalProvider = await useWeb3ModalProvider().walletProvider;
             const web3Provider = new ethers.BrowserProvider(modalProvider);
             const signer = await web3Provider.getSigner();

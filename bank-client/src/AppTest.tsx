@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
+import { createWeb3Modal, defaultConfig, useWeb3Modal } from '@web3modal/ethers/react';
 import { abi as ERC20_ABI } from './abis/ERC20.json';
 import { abi as Bank_ABI } from './abis/Bank.json';
-import {useWeb3ModalProvider} from "@web3modal/ethers/vue";
 
 // 配置
 const TOKEN_ADDRESS = '0xYourZ0TokenAddress'; // 替换为你的 Z0 token 合约地址
@@ -31,7 +30,7 @@ const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // 替换为你的 WalletConn
 const metadata = {
     name: 'Z0 Bank DApp',
     description: '一个去中心化的 Z0 token 银行',
-    url: 'https://your-dapp-url.com',
+    url: 'http://localhost:5173', // 与实际运行的 URL 匹配
     icons: ['https://your-dapp-url.com/icon.png'],
 };
 
@@ -49,16 +48,14 @@ const ethersConfig = defaultConfig({
     enableEIP6963: true,
 });
 
-// @ts-ignore
-const web3Modal = createWeb3Modal({
+createWeb3Modal({
     ethersConfig,
     chains: chainsConfig,
     projectId,
     themeMode: 'dark',
 });
 
-const App: React.FC = () => {
-
+const AppStart: React.FC = () => {
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
     // @ts-ignore
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
@@ -70,40 +67,75 @@ const App: React.FC = () => {
     const [recipient, setRecipient] = useState<string>('');
     const [error, setError] = useState<string>('');
 
+    // @ts-ignore
+    const { open, close } = useWeb3Modal();
+
     // 初始化钱包连接
     const connectWallet = async () => {
         try {
+            // 打开 Web3Modal 模态框
+            await open();
+            debugger
+            // Web3Modal 会自动处理连接，我们需要在连接后手动获取提供者
+            if (window.ethereum) {
+                const modalProvider = window.ethereum;
+                // @ts-ignore
+                const web3Provider = new ethers.BrowserProvider(modalProvider);
+                const signer = await web3Provider.getSigner();
+                const address = await signer.getAddress();
+                const network = await web3Provider.getNetwork();
 
-            const modalProvider = await useWeb3ModalProvider().walletProvider;
-            const web3Provider = new ethers.BrowserProvider(modalProvider);
-            const signer = await web3Provider.getSigner();
-            const address = await signer.getAddress();
-            const network = await web3Provider.getNetwork();
-            const chainIdHex = ethers.hexlify(network.chainId.toString());
+                // 确保 chainId 是有效的
+                if (!network.chainId) {
+                    throw new Error('无法获取链 ID');
+                }
 
-            setProvider(web3Provider);
-            setSigner(signer);
-            setAccount(address);
-            setChainId(chainIdHex);
+                // 直接使用 chainId（bigint）并转换为十六进制字符串
+                // @ts-ignore
+                console.log(network.chainId.toString())
+                //const chainIdHex = ethers.hexlify(network.chainId);
 
-            // 初始化合约
-            const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
-            const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
-            setTokenContract(token);
-            setBankContract(bank);
+                setProvider(web3Provider);
+                setSigner(signer);
+                setAccount(address);
+                //setChainId(chainIdHex);
 
-            // 处理账户和链的变化
-            modalProvider.on('accountsChanged', (accounts: string[]) => {
-                setAccount(accounts[0] || '');
-            });
-            modalProvider.on('chainChanged', (newChainId: string) => {
-                setChainId(newChainId);
-                window.location.reload();
-            });
+                // 初始化合约
+                const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
+                const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
+                setTokenContract(token);
+                setBankContract(bank);
+
+                // 处理账户和链的变化
+                // @ts-ignore
+                modalProvider.on('accountsChanged', (accounts: string[]) => {
+                    setAccount(accounts[0] || '');
+                    if (!accounts.length) {
+                        resetState();
+                    }
+                });
+                // @ts-ignore
+                modalProvider.on('chainChanged', (newChainId: string) => {
+                    setChainId(newChainId);
+                    window.location.reload();
+                });
+            } else {
+                throw new Error('未检测到以太坊提供者');
+            }
         } catch (err: any) {
             setError('无法连接钱包');
             console.error(err);
         }
+    };
+
+    // 重置状态
+    const resetState = () => {
+        setProvider(null);
+        setSigner(null);
+        setAccount('');
+        setChainId('');
+        setTokenContract(null);
+        setBankContract(null);
     };
 
     // 切换链
@@ -271,4 +303,4 @@ const App: React.FC = () => {
     );
 };
 
-export default App;
+export default AppStart;

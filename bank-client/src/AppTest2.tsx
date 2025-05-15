@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { createWeb3Modal, defaultConfig, useWeb3Modal } from '@web3modal/ethers/react';
+import { createWeb3Modal, defaultConfig, useWeb3Modal, useWeb3ModalProvider, useWeb3ModalAccount } from '@web3modal/ethers/react';
 import { abi as ERC20_ABI } from './abis/ERC20.json';
 import { abi as Bank_ABI } from './abis/Bank.json';
 
@@ -67,63 +67,69 @@ const AppStart: React.FC = () => {
     const [recipient, setRecipient] = useState<string>('');
     const [error, setError] = useState<string>('');
 
+    const { open } = useWeb3Modal();
+    const { walletProvider } = useWeb3ModalProvider();
     // @ts-ignore
-    const { open, close } = useWeb3Modal();
+    const { address, chainId: modalChainId, isConnected } = useWeb3ModalAccount();
 
     // 初始化钱包连接
     const connectWallet = async () => {
         try {
             // 打开 Web3Modal 模态框
             await open();
+
             debugger
-            // Web3Modal 会自动处理连接，我们需要在连接后手动获取提供者
-            if (window.ethereum) {
-                const modalProvider = window.ethereum;
-                // @ts-ignore
-                const web3Provider = new ethers.BrowserProvider(modalProvider);
-                const signer = await web3Provider.getSigner();
-                const address = await signer.getAddress();
-                const network = await web3Provider.getNetwork();
-
-                // 确保 chainId 是有效的
-                if (!network.chainId) {
-                    throw new Error('无法获取链 ID');
-                }
-
-                // 直接使用 chainId（bigint）并转换为十六进制字符串
-                // @ts-ignore
-                const chainIdHex = ethers.hexlify(network.chainId);
-
-                setProvider(web3Provider);
-                setSigner(signer);
-                setAccount(address);
-                setChainId(chainIdHex);
-
-                // 初始化合约
-                const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
-                const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
-                setTokenContract(token);
-                setBankContract(bank);
-
-                // 处理账户和链的变化
-                // @ts-ignore
-                modalProvider.on('accountsChanged', (accounts: string[]) => {
-                    setAccount(accounts[0] || '');
-                    if (!accounts.length) {
-                        resetState();
-                    }
-                });
-                // @ts-ignore
-                modalProvider.on('chainChanged', (newChainId: string) => {
-                    setChainId(newChainId);
-                    window.location.reload();
-                });
-            } else {
-                throw new Error('未检测到以太坊提供者');
+            // 检查是否成功连接
+            if (!isConnected || !walletProvider) {
+                throw new Error('用户取消了钱包连接或未选择钱包');
             }
+
+            // 确保 walletProvider 是有效的 EIP-1193 提供者
+            if (typeof walletProvider.request !== 'function') {
+                throw new Error('无效的钱包提供者');
+            }
+
+            const web3Provider = new ethers.BrowserProvider(walletProvider);
+            const signer = await web3Provider.getSigner();
+            const address = await signer.getAddress();
+            // @ts-ignore
+            const network = await web3Provider.getNetwork();
+
+            // 使用 modalChainId 作为链 ID（字符串类型），避免 getNetwork 失败
+            if (!modalChainId) {
+                throw new Error('无法获取链 ID');
+            }
+
+            const chainIdHex = modalChainId; // 直接使用 modalChainId，无需 ethers.hexlify
+
+            setProvider(web3Provider);
+            setSigner(signer);
+            setAccount(address || '');
+            // @ts-ignore
+            setChainId(chainIdHex);
+
+            // 初始化合约
+            const token = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
+            const bank = new ethers.Contract(BANK_ADDRESS, Bank_ABI, signer);
+            setTokenContract(token);
+            setBankContract(bank);
+
+            // 处理账户和链的变化
+            // @ts-ignore
+            walletProvider.on('accountsChanged', (accounts: string[]) => {
+                setAccount(accounts[0] || '');
+                if (!accounts.length) {
+                    resetState();
+                }
+            });
+            // @ts-ignore
+            walletProvider.on('chainChanged', (newChainId: string) => {
+                setChainId(newChainId);
+                window.location.reload();
+            });
         } catch (err: any) {
-            setError('无法连接钱包');
-            console.error(err);
+            setError(err.message || '无法连接钱包');
+            console.error('连接钱包失败:', err);
         }
     };
 
@@ -152,7 +158,7 @@ const AppStart: React.FC = () => {
                     }]);
                 }
             } else {
-                setError('无法切换链');
+                setError('无法切换链: ' + err.message);
                 console.error(err);
             }
         }
@@ -167,7 +173,7 @@ const AppStart: React.FC = () => {
             alert('授权成功');
             setAmount('');
         } catch (err: any) {
-            setError(err.message);
+            setError('授权失败: ' + err.message);
             console.error(err);
         }
     };
@@ -181,7 +187,7 @@ const AppStart: React.FC = () => {
             alert('存款成功');
             setAmount('');
         } catch (err: any) {
-            setError(err.message);
+            setError('存款失败: ' + err.message);
             console.error(err);
         }
     };
@@ -195,7 +201,7 @@ const AppStart: React.FC = () => {
             alert('取款成功');
             setAmount('');
         } catch (err: any) {
-            setError(err.message);
+            setError('取款失败: ' + err.message);
             console.error(err);
         }
     };
@@ -210,7 +216,7 @@ const AppStart: React.FC = () => {
             setAmount('');
             setRecipient('');
         } catch (err: any) {
-            setError(err.message);
+            setError('转账失败: ' + err.message);
             console.error(err);
         }
     };
