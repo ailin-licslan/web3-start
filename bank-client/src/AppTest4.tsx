@@ -5,8 +5,8 @@ import { abi as ERC20_ABI } from './abis/ERC20.json';
 import { abi as Bank_ABI } from './abis/Bank.json';
 
 // 配置
-const TOKEN_ADDRESS = '0xYourZ0TokenAddress'; // 替换为你的 Z0 token 合约地址
-const BANK_ADDRESS = '0xYourBankAddress'; // 替换为你的 bank 合约地址
+const TOKEN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3'; // 替换为你的 Z0 token 合约地址
+const BANK_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'; // 替换为你的 bank 合约地址
 const CHAINS = [
     {
         chainId: '0x7A69', // Hardhat 本地链 (31337)
@@ -167,7 +167,7 @@ const AppTest4: React.FC = () => {
     const approveBank = async () => {
         try {
             if (!approveAmount) throw new Error('请输入授权金额');
-            const tx = await tokenContract?.approve(BANK_ADDRESS, ethers.parseEther(approveAmount));
+            const tx = await tokenContract?.approveBank(BANK_ADDRESS, ethers.parseEther(approveAmount));
             await tx.wait();
             alert('授权成功');
         } catch (err: any) {
@@ -180,7 +180,7 @@ const AppTest4: React.FC = () => {
     const depositTokens = async () => {
         try {
             if (!depositAmount) throw new Error('请输入存款金额');
-            const tx = await bankContract?.deposit(ethers.parseEther(depositAmount));
+            const tx = await bankContract?.depositToAddress(ethers.parseEther(depositAmount));
             await tx.wait();
             alert('存款成功');
             setDepositAmount('');
@@ -208,7 +208,7 @@ const AppTest4: React.FC = () => {
     const transferTokens = async () => {
         try {
             if (!transferAmount || !recipient) throw new Error('请输入转账金额和收款地址');
-            const tx = await bankContract?.transfer(recipient, ethers.parseEther(transferAmount));
+            const tx = await bankContract?.transferInBank(recipient, ethers.parseEther(transferAmount));
             await tx.wait();
             alert('转账成功');
             setTransferAmount('');
