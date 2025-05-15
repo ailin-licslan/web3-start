@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Bank contract for depositing, withdrawing, and transferring tokens
 contract Bank {
+
     // Mapping to store user deposits (address => token balance)
     mapping(address => uint256) public balanceOfDeposit;
 
