@@ -23,7 +23,7 @@ contract Bank{
     }
     //存款 deposit: 将当前调用者账户的余额转到当前合约的地址(相当于存钱到银行)  
     function depositToAddress(uint256 amount) public{
-        amount = amount * 10 ** 18;
+        //amount = amount * 10 ** 18;
         if (!IERC20(token).transferFrom(msg.sender, address(this), amount)) {
             revert TransferFromFailed(msg.sender, address(this), amount);
         }
@@ -44,7 +44,7 @@ contract Bank{
 
     //取款  external : 内部外部都可以调用
     function withdraw(uint256 amount) external {
-        amount = amount * 10 ** 18;
+        //amount = amount * 10 ** 18;
         //你取钱不能超过你银行账户中所拥有的钱   这个require可以优化成modifier 
         require(amount<=balanceOfDeposit[msg.sender], "the withdraw amount is too large!");
         //从当前合约地址取款到调用方地址:msg.sender 提多少钱走: amount  内部有回滚机制
@@ -55,7 +55,7 @@ contract Bank{
 
     //银行账户之间的转账 将银行中的存钱的地址转账到某个其他的账户 
     function transferInBank(address to, uint256 amount) public {
-        amount = amount * 10 ** 18;
+        //amount = amount * 10 ** 18;
         //转账的金额要小于你银行账户的钱  这个require可以优化成modifier 
         require(amount<=balanceOfDeposit[msg.sender], "the transfer amount is too large!");
         //调用者的银行账户减少多少钱

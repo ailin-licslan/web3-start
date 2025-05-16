@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bank DApp</title>
+</head>
+<body>
+<h1>Bank DApp</h1>
+<button id="connectButton">Connect Wallet</button>
+<button id="authorizeButton" disabled>Authorize Bank</button>
+<button id="depositButton" disabled>Deposit 300 Tokens</button>
+<div>
+    <p>Connected Account: <span id="connectedAccount">-</span></p>
+    <p>Token Balance: <span id="balance">-</span></p>
+    <p>Allowance: <span id="allowance">-</span></p>
+    <p>Deposit Balance: <span id="depositBalance">-</span></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
+<script>
+    const zeroAddress = "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44";
+    const bankAddress = "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f"; // Replace with the new Bank address after redeployment
+
+    const zeroAbi = [
+        { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" },
+        { "constant": true, "inputs": [{ "name": "account", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+        { "constant": true, "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+    ];
+
+    const bankAbi = [
+        { "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "depositToAddress", "outputs": [], "type": "function" },
+        { "constant": true, "inputs": [], "name": "balanceOfAddress", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+    ];
+
+    let web3, account;
+
+    async function connectWallet() {
+        if (!window.ethereum) {
+            alert("Please install MetaMask!");
+            return;
+        }
+        try {
+            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+            account = accounts[0];
+            document.getElementById("connectedAccount").textContent = account;
+            web3 = new Web3(window.ethereum);
+            document.getElementById("authorizeButton").disabled = false;
+            await updateBalances();
+        } catch (error) {
+            console.error("Wallet connection failed:", error);
+        }
+    }
+
+    async function updateBalances() {
+        const zeroContract = new web3.eth.Contract(zeroAbi, zeroAddress);
+        const bankContract = new web3.eth.Contract(bankAbi, bankAddress);
+        try {
+            const tokenBalance = await zeroContract.methods.balanceOf(account).call();
+            const allowance = await zeroContract.methods.allowance(account, bankAddress).call();
+            const depositBalance = await bankContract.methods.balanceOfAddress().call({ from: account });
+            document.getElementById("balance").textContent = web3.utils.fromWei(tokenBalance, "ether");
+            document.getElementById("allowance").textContent = web3.utils.fromWei(allowance, "ether");
+            document.getElementById("depositBalance").textContent = depositBalance; // Already in whole tokens
+        } catch (error) {
+            console.error("Error updating balances:", error);
+        }
+    }
+
+    async function authorize() {
+        try {
+            const zeroContract = new web3.eth.Contract(zeroAbi, zeroAddress);
+            const amount = web3.utils.toWei("1000", "ether");
+            console.log("Approving:", bankAddress, amount);
+            const tx = await zeroContract.methods.approve(bankAddress, amount).send({ from: account });
+            console.log("Approval transaction confirmed:", tx.transactionHash);
+            await updateBalances();
+            document.getElementById("depositButton").disabled = false;
+        } catch (error) {
+            console.error("Approval failed:", error);
+        }
+    }
+
+    async function deposit() {
+        try {
+            const bankContract = new web3.eth.Contract(bankAbi, bankAddress);
+            const amount = web3.utils.toWei("300", "ether");
+            const tx = await bankContract.methods.depositToAddress(amount).send({ from: account });
+            console.log("Deposit transaction confirmed:", tx.transactionHash);
+            await updateBalances();
+        } catch (error) {
+            console.error("Deposit failed:", error);
+        }
+    }
+
+    document.getElementById("connectButton").addEventListener("click", connectWallet);
+    document.getElementById("authorizeButton").addEventListener("click", authorize);
+    document.getElementById("depositButton").addEventListener("click", deposit);
+</script>
+</body>
+</html>
