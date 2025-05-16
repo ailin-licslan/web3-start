@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {console} from "hardhat/console.sol";
 
 contract Bank{
     error TransferFromFailed(address from, address to, uint256 amount);
@@ -23,8 +24,12 @@ contract Bank{
     }
     //存款 deposit: 将当前调用者账户的余额转到当前合约的地址(相当于存钱到银行)  
     function depositToAddress(uint256 amount) public{
+        console.log("deposited amount: ", amount);
         //amount = amount * 10 ** 18;
-        if (!IERC20(token).transferFrom(msg.sender, address(this), amount)) {
+        bool depositedSuc = IERC20(token).transferFrom(msg.sender, address(this), amount);
+        console.log("deposited depositedSuc: ", depositedSuc);
+        if (!depositedSuc) {
+            console.log("deposited failed: ", msg.sender, "address:", address(this));
             revert TransferFromFailed(msg.sender, address(this), amount);
         }
         balanceOfDeposit[msg.sender] += amount;
@@ -64,13 +69,4 @@ contract Bank{
         balanceOfDeposit[to]+=amount;
     }
 
-    // Approve token allowance for the bank contract
-//    function approveBank(uint256 amount) public {
-//        //amount = amount * 10**18; // Convert to token units
-//        // Approve the bank contract to spend tokens on behalf of the caller
-//        require(
-//            IERC20(token).approve(address(this), amount),
-//            "Approval failed"
-//        );
-//    }
 }
