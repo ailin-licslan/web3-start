@@ -49,8 +49,8 @@
         {"constant": false, "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "transferInBank", "outputs": [], "type": "function"}
     ];
 
-    const TOKEN_ADDRESS = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
-    const BANK_ADDRESS = '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
+    const TOKEN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+    const BANK_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
 
     const CHAINS = {
         '1': { name: 'Ethereum Mainnet', rpc: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID', chainId: '0x1', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, explorer: 'https://etherscan.io' },
@@ -159,6 +159,7 @@
             }
         };
 
+        //授权
         const approve = async () => {
             if (!web3 || !account) return;
             if (!amount || parseFloat(amount) <= 0) {
@@ -180,6 +181,7 @@
             }
         };
 
+        //存款
         const deposit = async () => {
             if (!web3 || !account) return;
             if (!amount || parseFloat(amount) <= 0) {
@@ -194,7 +196,7 @@
                 const walletBal = await tokenContract.methods.balanceOf(account).call();
                 const ethBalance = await web3.eth.getBalance(account);
                 const allowanceInEther = web3.utils.fromWei(currentAllowance, 'ether');
-                const amountWeiInEther = web3.utils.fromWei(amountWei, 'ether');
+                //const amountWeiInEther = web3.utils.fromWei(amountWei, 'ether');
                 //console.log('Deposit - Current Allowance (Wei):', currentAllowance, 'Current Allowance (Z0):', allowanceInEther, 'Requested Amount (Wei):', amountWei, 'Requested Amount (Z0):', amountWeiInEther, 'Wallet Balance:', web3.utils.fromWei(walletBal, 'ether'), 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
 
                 console.log("currentAllowance",currentAllowance,"amountWei",amountWei )
@@ -205,6 +207,7 @@
                     setError(`授权金额不足，当前: ${allowanceInEther} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                     return;
                 }
+                console.log("2222222222222currentAllowance",currentAllowance,"amountWei",amountWei )
                 if (BigInt(walletBal/(10 ** 18)) < BigInt(amountWei/(10 ** 18))) {
                     debugger
                     setError(`钱包余额不足，当前: ${web3.utils.fromWei(walletBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
@@ -215,12 +218,13 @@
                     setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
                     return;
                 }
+                console.log("3333333333333333currentAllowance",currentAllowance,"amountWei",amountWei )
 
                 const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
                 console.log("start .....", account)
                 const a = amountWei/(10 ** 18);
                 console.log("a .....", a)
-                const tx = await bankContract.methods.depositToAddress(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
+                const tx = await bankContract.methods.depositToAddress(a).send({ from: account, gas: 300000 });
                 //const tx = await bankContract.methods.depositToAddress(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
                 console.log("end .....")
                 console.log('Deposit Transaction Hash:', tx.transactionHash);
@@ -232,6 +236,7 @@
             }
         };
 
+        //取款
         const withdraw = async () => {
             if (!web3 || !account) return;
             if (!amount || parseFloat(amount) <= 0) {
@@ -265,6 +270,8 @@
             }
         };
 
+
+        //转账
         const transferInBank = async () => {
             if (!web3 || !account) return;
             if (!amount || parseFloat(amount) <= 0) {

@@ -4,13 +4,13 @@ pragma solidity ^0.8.27;
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract bank{
+contract v1Bank{
     
     //以太坊中三种交易 普通交易(用户间一个转账)  创建合约 (不少合约生产合约地址) 调用合约(abi 向合约地址发送一笔交易) 
     
     //定义银行账户地址 某个地址有多少存款
     mapping (address=> uint256) public balanceOfDeposit;
-    //代币合约地址  immutable:不可修改 对应之前的代币合约地址 zero.sol
+    //代币合约地址  immutable:不可修改 对应之前的代币合约地址 v2Zero.sol.sol
     address public immutable token;
     //初始化合约地址  把之前的代币 Z0 合约地址放这里 初始化进去 
     constructor(address token_){

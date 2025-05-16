@@ -1,30 +1,30 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("Bank", function () {
+describe("v2Bank.sol", function () {
     let zero, bank, owner, user1, user2;
 
     beforeEach(async function () {
         [owner, user1, user2] = await ethers.getSigners();
 
-        // Deploy Zero token contract
+        // Deploy v2Zero.sol token contract
         const Zero = await ethers.getContractFactory("Zero");
-        zero = await Zero.deploy("Zero Token", "Z0");
+        zero = await Zero.deploy("v2Zero.sol Token", "Z0");
         await zero.waitForDeployment();
-        console.log("Zero contract deployed at:", zero.target);
+        console.log("v2Zero.sol contract deployed at:", zero.target);
 
-        // Deploy Bank contract with Zero token address
-        const Bank = await ethers.getContractFactory("Bank");
+        // Deploy v2Bank.sol contract with v2Zero.sol token address
+        const Bank = await ethers.getContractFactory("v2Bank.sol");
         bank = await Bank.deploy(zero.target);
         await bank.waitForDeployment();
-        console.log("Bank contract deployed at:", bank.target);
+        console.log("v2Bank.sol contract deployed at:", bank.target);
 
         // Mint 100 Z0 tokens to user1
         await zero.transfer(user1.address, ethers.parseEther("100"));
     });
 
     it("should allow deposits", async function () {
-        // Approve Bank to spend 50 Z0 tokens on behalf of user1
+        // Approve v2Bank.sol to spend 50 Z0 tokens on behalf of user1
         await zero.connect(user1).approve(bank.target, ethers.parseEther("50"));
 
         // Deposit 50 Z0 tokens (contract multiplies by 10^18 internally)
@@ -36,7 +36,7 @@ describe("Bank", function () {
     });
 
     it("should allow withdrawals", async function () {
-        // Approve Bank to spend 50 Z0 tokens
+        // Approve v2Bank.sol to spend 50 Z0 tokens
         await zero.connect(user1).approve(bank.target, ethers.parseEther("50"));
 
         // Deposit 50 Z0 tokens
@@ -51,7 +51,7 @@ describe("Bank", function () {
     });
 
     it("should allow transfers", async function () {
-        // Approve Bank to spend 50 Z0 tokens
+        // Approve v2Bank.sol to spend 50 Z0 tokens
         await zero.connect(user1).approve(bank.target, ethers.parseEther("50"));
 
         // Deposit 50 Z0 tokens

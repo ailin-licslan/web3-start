@@ -26,7 +26,7 @@ const CHAINS = [
 // Web3Modal 配置
 const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // 替换为你的 WalletConnect project ID
 const metadata = {
-    name: 'Z0 Bank DApp',
+    name: 'Z0 v2Bank.sol DApp',
     description: '一个去中心化的 Z0 token 银行',
     url: 'http://localhost:5173', // 与实际运行的 URL 匹配
     icons: ['https://your-dapp-url.com/icon.png'],

@@ -10,11 +10,11 @@ async function main() {
     await z0Token.waitForDeployment;
     console.log("Z0Token deployed to:", z0Token.address);
 
-    // 部署 Bank
-    const Bank = await ethers.getContractFactory("Bank");
+    // 部署 v2Bank.sol
+    const Bank = await ethers.getContractFactory("v2Bank.sol");
     const bank = await Bank.deploy(z0Token.address);
     await bank.waitForDeployment;
-    console.log("Bank deployed to:", bank.address);
+    console.log("v2Bank.sol deployed to:", bank.address);
 }
 
 main().catch((error) => {

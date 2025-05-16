@@ -4,7 +4,7 @@
 // import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 //
 // import { abi as ERC20_ABI } from './abis/ERC20.json';
-// import { abi as Bank_ABI } from './abis/Bank.json';
+// import { abi as Bank_ABI } from './abis/v2Bank.sol.json';
 //
 // // Configuration
 // const TOKEN_ADDRESS = '0xYourZ0TokenAddress'; // Replace with your Z0 token contract address
@@ -30,7 +30,7 @@
 // // Web3Modal configuration
 // const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // Replace with your WalletConnect project ID
 // const metadata = {
-//     name: 'Z0 Bank DApp',
+//     name: 'Z0 v2Bank.sol DApp',
 //     description: 'A decentralized bank for Z0 tokens',
 //     url: 'https://your-dapp-url.com',
 //     icons: ['https://your-dapp-url.com/icon.png'],
@@ -191,7 +191,7 @@
 //
 //     return (
 //         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4">
-//             <h1 className="text-3xl font-bold mb-6">Z0 Bank DApp</h1>
+//             <h1 className="text-3xl font-bold mb-6">Z0 v2Bank.sol DApp</h1>
 //
 //             {/* Wallet Connection */}
 //             {!account ? (
@@ -232,7 +232,7 @@
 //                         onClick={approveBank}
 //                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
 //                     >
-//                         Approve Bank
+//                         Approve v2Bank.sol
 //                     </button>
 //
 //                     {/* Deposit Button */}
