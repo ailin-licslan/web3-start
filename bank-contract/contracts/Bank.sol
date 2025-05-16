@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Bank{
-    
+    error TransferFromFailed(address from, address to, uint256 amount);
     //以太坊中三种交易 普通交易(用户间一个转账)  创建合约 (不少合约生产合约地址) 调用合约(abi 向合约地址发送一笔交易) 
     
     //定义银行账户地址 某个地址有多少存款
@@ -22,18 +22,23 @@ contract Bank{
         //return balance[msg.sender];
     }
     //存款 deposit: 将当前调用者账户的余额转到当前合约的地址(相当于存钱到银行)  
-    function depositToAddress(uint256 amount) public{   
+    function depositToAddress(uint256 amount) public{
         amount = amount * 10 ** 18;
-        //从当前调用者: FROM==>msg.sender 转多少==> amount 到 TO:什么地址==>address(this) 
-        //IERC20(token).transferFrom(msg.sender,address(this),amount);  返回结果时bool 所以可以判断一下 true才是转账成功 否则就会中断后续操作和回滚
-        //transferFrom 再转账时需要提前授权 approve一下给到当前的银行合约让其可以操作之前代币的里面的账户金额 
-        // USER X ===> X授权银行合约可以转多少  X 调用ERC20的approve方法 approve(银行合约地址 address, 可以转多少amount)
-        // USER X ===> X调用合约bank 就是当前合约的depositToAddress方法 depositToAddress(可以转多少amount) 完成存钱操作
-        //uniswap 授权优化  EIP2612 线下签名授权 可以节省一笔gas费
-        require(IERC20(token).transferFrom(msg.sender, address(this), amount),"The transfer not success!");
-        //将当前账户的余额+=转多少 和存钱到当前合约的地址 balanceOfDeposit[msg.sender] += amount  ==>balanceOfDeposit[address(this)] = balanceOfDeposit[address(this)] + amount
-        //require()函数会判断前一个表达式的结果是否为真，如果为假则停止后续操作并回滚状态。此函数的返回结果是bool类型，如果为true则表示转账成功，否则则表示转账失败
-        balanceOfDeposit[msg.sender] += amount;    //将当前调用者的余额存到map中
+        if (!IERC20(token).transferFrom(msg.sender, address(this), amount)) {
+            revert TransferFromFailed(msg.sender, address(this), amount);
+        }
+        balanceOfDeposit[msg.sender] += amount;
+//        amount = amount * 10 ** 18;
+//        //从当前调用者: FROM==>msg.sender 转多少==> amount 到 TO:什么地址==>address(this)
+//        //IERC20(token).transferFrom(msg.sender,address(this),amount);  返回结果时bool 所以可以判断一下 true才是转账成功 否则就会中断后续操作和回滚
+//        //transferFrom 再转账时需要提前授权 approve一下给到当前的银行合约让其可以操作之前代币的里面的账户金额
+//        // USER X ===> X授权银行合约可以转多少  X 调用ERC20的approve方法 approve(银行合约地址 address, 可以转多少amount)
+//        // USER X ===> X调用合约bank 就是当前合约的depositToAddress方法 depositToAddress(可以转多少amount) 完成存钱操作
+//        //uniswap 授权优化  EIP2612 线下签名授权 可以节省一笔gas费
+//        require(IERC20(token).transferFrom(msg.sender, address(this), amount),"The transfer not success!");
+//        //将当前账户的余额+=转多少 和存钱到当前合约的地址 balanceOfDeposit[msg.sender] += amount  ==>balanceOfDeposit[address(this)] = balanceOfDeposit[address(this)] + amount
+//        //require()函数会判断前一个表达式的结果是否为真，如果为假则停止后续操作并回滚状态。此函数的返回结果是bool类型，如果为true则表示转账成功，否则则表示转账失败
+//        balanceOfDeposit[msg.sender] += amount;    //将当前调用者的余额存到map中
     }
 
 
@@ -60,12 +65,12 @@ contract Bank{
     }
 
     // Approve token allowance for the bank contract
-    function approveBank(uint256 amount) public {
-        amount = amount * 10**18; // Convert to token units
-        // Approve the bank contract to spend tokens on behalf of the caller
-        require(
-            IERC20(token).approve(address(this), amount),
-            "Approval failed"
-        );
-    }
+//    function approveBank(uint256 amount) public {
+//        //amount = amount * 10**18; // Convert to token units
+//        // Approve the bank contract to spend tokens on behalf of the caller
+//        require(
+//            IERC20(token).approve(address(this), amount),
+//            "Approval failed"
+//        );
+//    }
 }
