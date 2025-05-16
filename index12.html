@@ -2,9 +2,94 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>$Title$</title>
+  <title>Bank DApp</title>
 </head>
 <body>
-$END$
+<h1>Bank DApp</h1>
+<button id="connectButton">Connect Wallet</button>
+<button id="authorizeButton" disabled>Authorize Bank</button>
+<button id="depositButton" disabled>Deposit 1000 Tokens</button>
+<div>
+  <p>Connected Account: <span id="connectedAccount">-</span></p>
+  <p>Allowance: <span id="allowance">-</span></p>
+  <p>Balance: <span id="balance">-</span></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
+<script>
+  const zeroAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+  const bankAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"; // Replace with the new Bank address after redeployment
+
+  const zeroAbi = [
+    { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" },
+    { "constant": true, "inputs": [{ "name": "account", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+    { "constant": true, "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+  ];
+
+  const bankAbi = [
+    { "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "depositToAddress", "outputs": [], "type": "function" },
+    { "constant": true, "inputs": [], "name": "balanceOfAddress", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" }
+  ];
+
+  let web3, account;
+
+  async function connectWallet() {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      account = accounts[0];
+      document.getElementById("connectedAccount").textContent = account;
+      web3 = new Web3(window.ethereum);
+      document.getElementById("authorizeButton").disabled = false;
+      // Check initial balance and allowance
+      await updateBalanceAndAllowance();
+    } catch (error) {
+      console.error("Wallet connection failed:", error);
+    }
+  }
+
+  async function updateBalanceAndAllowance() {
+    const zeroContract = new web3.eth.Contract(zeroAbi, zeroAddress);
+    const balance = await zeroContract.methods.balanceOf(account).call();
+    const allowance = await zeroContract.methods.allowance(account, bankAddress).call();
+    document.getElementById("balance").textContent = web3.utils.fromWei(balance, "ether");
+    document.getElementById("allowance").textContent = web3.utils.fromWei(allowance, "ether");
+  }
+
+  async function authorize() {
+    try {
+      const zeroContract = new web3.eth.Contract(zeroAbi, zeroAddress);
+      const amount = web3.utils.toWei("1000", "ether");
+      console.log("Approving:", bankAddress, amount);
+      const tx = await zeroContract.methods.approve(bankAddress, amount).send({ from: account });
+      console.log("Approval transaction confirmed:", tx.transactionHash);
+      await updateBalanceAndAllowance();
+      document.getElementById("depositButton").disabled = false;
+    } catch (error) {
+      console.error("Approval failed:", error);
+    }
+  }
+
+  async function deposit() {
+    try {
+      const bankContract = new web3.eth.Contract(bankAbi, bankAddress);
+      const amount = web3.utils.toWei("1000", "ether");
+      const tx = await bankContract.methods.depositToAddress(amount).send({ from: account });
+      console.log("Deposit transaction confirmed:", tx.transactionHash);
+      // Check deposit balance
+      const depositBalance = await bankContract.methods.balanceOfAddress().call({ from: account });
+      console.log("Deposit balance:", depositBalance);
+    } catch (error) {
+      console.error("Deposit failed:", error);
+    }
+  }
+
+  document.getElementById("connectButton").addEventListener("click", connectWallet);
+  document.getElementById("authorizeButton").addEventListener("click", authorize);
+  document.getElementById("depositButton").addEventListener("click", deposit);
+</script>
 </body>
 </html>

@@ -162,6 +162,25 @@
         };
 
         //授权
+        const authorize = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            try {
+                const zeroContract = new web3.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
+                // Amount: 1000 tokens * 10^18 (Zero has 18 decimals)
+                const amount = web3.utils.toWei(amount, "ether"); // 1000 tokens in wei
+                console.log("Approving:", BANK_ADDRESS, amount);
+                // Call approve
+                const tx = await zeroContract.methods.approve(BANK_ADDRESS, amount).send({ from: account });
+                console.log("Approval transaction confirmed:", tx.transactionHash);
+                document.getElementById("depositButton").disabled = false;
+            } catch (error) {
+                console.error("Approval failed:", error);
+            }
+        }
         const approve = async () => {
             if (!web3 || !account) return;
             if (!amount || parseFloat(amount) <= 0) {
@@ -241,7 +260,7 @@
                 console.log("a .....", a)
 
                 //bank合约调用存款的方法
-                const tx = await bankContract.methods.depositToAddress(a).send({ from: account, gas: 300000 });
+                const tx = await bankContract.methods.depositToAddress(a).send({ from: account, gas: 3000000 });
                 //const tx = await bankContract.methods.depositToAddress(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
                 console.log("end .....")
                 console.log('Deposit Transaction Hash:', tx.transactionHash);
@@ -357,7 +376,7 @@
                                 placeholder="输入金额 (以太)"
                                 className="w-full p-2 mb-2 border rounded"
                             />
-                            <button onClick={approve} className="w-full bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 mb-2">授权</button>
+                            <button onClick={authorize} className="w-full bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 mb-2">授权</button>
                             <button onClick={deposit} className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-2">存款</button>
                             <button onClick={withdraw} className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 mb-2">取款</button>
                         </div>
