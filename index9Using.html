@@ -109,7 +109,6 @@
                 setWalletBalance(web3Instance.utils.fromWei(walletBal, 'ether'));
                 setBankBalance(web3Instance.utils.fromWei(bankBal, 'ether'));
                 setTokenSymbol(symbol==="Z0"?"ETH":"$");
-                //setAllowance(allowanceBal);
                 setAllowance(web3Instance.utils.fromWei(allowanceBal, 'ether') * 10**18);
             } catch (err) {
                 setError('获取数据失败: ' + err.message);
@@ -167,9 +166,12 @@
                 return;
             }
             try {
+                //ERC20 合约对象
                 const tokenContract = new web3.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
                 const amountWei = web3.utils.toWei(amount, 'ether');
                 console.log("the Approve amountWei is ", amountWei, "account is ", account)
+
+                //授权给银行地址可以使用多少金额
                 const tx = await tokenContract.methods.approve(BANK_ADDRESS, amountWei/(10 ** 18)).send({ from: account });
                 console.log('Approve Transaction Hash:', tx.transactionHash);
                 await new Promise(resolve => setTimeout(resolve, 1000)); // 等待链上状态同步
@@ -190,12 +192,21 @@
             }
             try {
                 debugger
+                //ERC20 合约对象
                 const tokenContract = new web3.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
+
+                //要存多少钱
                 const amountWei = web3.utils.toWei(amount, 'ether');
+
+                //查询向银行合约地址已经授权的金额
                 const currentAllowance = await tokenContract.methods.allowance(account, BANK_ADDRESS).call();
+
+                //ERC20 代币余额
                 const walletBal = await tokenContract.methods.balanceOf(account).call();
+
+                //当前账户ETH余额 (合约调用方)
                 const ethBalance = await web3.eth.getBalance(account);
-                const allowanceInEther = web3.utils.fromWei(currentAllowance, 'ether');
+                const allowanceInEther = web3.utils.fromWei(currentAllowance, 'ether');  // x eth * 10 ** 18
                 //const amountWeiInEther = web3.utils.fromWei(amountWei, 'ether');
                 //console.log('Deposit - Current Allowance (Wei):', currentAllowance, 'Current Allowance (Z0):', allowanceInEther, 'Requested Amount (Wei):', amountWei, 'Requested Amount (Z0):', amountWeiInEther, 'Wallet Balance:', web3.utils.fromWei(walletBal, 'ether'), 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
 
@@ -203,27 +214,28 @@
 
                 //已经运行被授权可以动用的金额要大于等于存款金额
                 if (BigInt(currentAllowance) < BigInt(amountWei/(10 ** 18))) {
-                    debugger
                     setError(`授权金额不足，当前: ${allowanceInEther} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                     return;
                 }
                 console.log("2222222222222currentAllowance",currentAllowance,"amountWei",amountWei )
                 if (BigInt(walletBal/(10 ** 18)) < BigInt(amountWei/(10 ** 18))) {
-                    debugger
                     setError(`钱包余额不足，当前: ${web3.utils.fromWei(walletBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                     return;
                 }
                 if (BigInt(ethBalance/(10 ** 18)) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
-                    debugger
                     setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
                     return;
                 }
                 console.log("3333333333333333currentAllowance",currentAllowance,"amountWei",amountWei )
 
+
+                //bank 合约对象
                 const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
                 console.log("start .....", account)
                 const a = amountWei/(10 ** 18);
                 console.log("a .....", a)
+
+                //bank合约调用存款的方法
                 const tx = await bankContract.methods.depositToAddress(a).send({ from: account, gas: 300000 });
                 //const tx = await bankContract.methods.depositToAddress(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
                 console.log("end .....")
