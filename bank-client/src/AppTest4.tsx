@@ -3,8 +3,6 @@ import { ethers } from 'ethers';
 import { createWeb3Modal, defaultConfig, useWeb3Modal } from '@web3modal/ethers/react';
 import { abi as ERC20_ABI } from './abis/ERC20.json';
 import { abi as Bank_ABI } from './abis/Bank.json';
-
-// 配置
 const TOKEN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3'; // 替换为你的 Z0 token 合约地址
 const BANK_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'; // 替换为你的 bank 合约地址
 const CHAINS = [

@@ -1,10 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>$Title$</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多链钱包连接</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@babel/standalone@latest/babel.min.js"></script>
 </head>
 <body>
-$END$
+<div id="root" class="min-h-screen bg-gray-100 flex items-center justify-center"></div>
+<script type="text/babel">
+  const { useState, useEffect } = React;
+  const { Web3 } = window;
+
+  // 链配置
+  const CHAINS = {
+    '1': {
+      name: 'Ethereum Mainnet',
+      rpc: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+      chainId: '0x1',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      explorer: 'https://etherscan.io'
+    },
+    '137': {
+      name: 'Polygon Mainnet',
+      rpc: 'https://polygon-rpc.com',
+      chainId: '0x89',
+      nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+      explorer: 'https://polygonscan.com'
+    },
+    '56': {
+      name: 'BNB Chain',
+      rpc: 'https://bsc-dataseed.binance.org',
+      chainId: '0x38',
+      nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+      explorer: 'https://bscscan.com'
+    }
+  };
+
+  const App = () => {
+    const [account, setAccount] = useState(null);
+    const [chainId, setChainId] = useState(null);
+    const [web3, setWeb3] = useState(null);
+    const [error, setError] = useState(null);
+
+    // 初始化 Web3 和钱包连接
+    useEffect(() => {
+      if (window.ethereum) {
+        const web3Instance = new Web3(window.ethereum);
+        setWeb3(web3Instance);
+
+        // 监听账户变更
+        window.ethereum.on('accountsChanged', (accounts) => {
+          setAccount(accounts[0] || null);
+        });
+
+        // 监听链变更
+        window.ethereum.on('chainChanged', (newChainId) => {
+          setChainId(newChainId);
+        });
+
+        // 获取初始状态
+        web3Instance.eth.getChainId().then(setChainId);
+      } else {
+        setError('请安装 MetaMask 钱包');
+      }
+    }, []);
+
+    // 连接钱包
+    const connectWallet = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          setAccount(accounts[0]);
+          setError(null);
+        } catch (err) {
+          setError('连接钱包失败: ' + err.message);
+        }
+      }
+    };
+
+    // 切换网络
+    const switchChain = async (chainId) => {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId }],
+        });
+        setError(null);
+      } catch (err) {
+        if (err.code === 4902) {
+          // 链未添加，尝试添加
+          const chain = CHAINS[parseInt(chainId, 16)];
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId,
+                chainName: chain.name,
+                rpcUrls: [chain.rpc],
+                nativeCurrency: chain.nativeCurrency,
+                blockExplorerUrls: [chain.explorer]
+              }],
+            });
+          } catch (addErr) {
+            setError('添加网络失败: ' + addErr.message);
+          }
+        } else {
+          setError('切换网络失败: ' + err.message);
+        }
+      }
+    };
+
+    return (
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+              <h1 className="text-2xl font-bold mb-4 text-center">多链钱包连接</h1>
+
+              {error && (
+                      <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+                        {error}
+                      </div>
+              )}
+
+              {!account ? (
+                      <button
+                              onClick={connectWallet}
+                              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                      >
+                        连接钱包
+                      </button>
+              ) : (
+                      <div>
+                        <p className="text-sm mb-2">
+                          <span className="font-semibold">账户:</span>
+                          <span className="break-all"> {account}</span>
+                        </p>
+                        <p className="text-sm mb-4">
+                          <span className="font-semibold">当前链:</span>
+                          {chainId ? CHAINS[parseInt(chainId, 16)]?.name || '未知链' : '未连接'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.keys(CHAINS).map((id) => (
+                                  <button
+                                          key={id}
+                                          onClick={() => switchChain(CHAINS[id].chainId)}
+                                          className={`py-2 px-4 rounded text-sm ${
+                                                  chainId === CHAINS[id].chainId
+                                                          ? 'bg-green-500 text-white'
+                                                          : 'bg-gray-200 hover:bg-gray-300'
+                                          }`}
+                                  >
+                                    切换到 {CHAINS[id].name}
+                                  </button>
+                          ))}
+                        </div>
+                      </div>
+              )}
+            </div>
+    );
+  };
+
+  ReactDOM.render(<App />, document.getElementById('root'));
+</script>
 </body>
 </html>

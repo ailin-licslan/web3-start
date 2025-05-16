@@ -1,10 +1,392 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多链钱包连接</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone@latest/babel.min.js"></script>
 </head>
 <body>
-$END$
+<div id="root" className="min-h-screen bg-gray-100 flex items-center justify-center"></div>
+<script type="text/babel">
+    const { useState, useEffect } = React;
+    const { Web3 } = window;
+
+    const ZERO20_ABI = [
+        {"constant": true, "inputs": [{"name": "_owner", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "balance", "type": "uint256"}], "type": "function"},
+        {"constant": false, "inputs": [{"name": "_spender", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "approve", "outputs": [{"name": "", "type": "bool"}], "type": "function"},
+        {"constant": true, "inputs": [{"name": "_owner", "type": "address"}, {"name": "_spender", "type": "address"}], "name": "allowance", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
+        {"constant": true, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "string"}], "type": "function"}
+    ];
+
+    const BANK_ABI = [
+        {"constant": true, "inputs": [{"name": "", "type": "address"}], "name": "balanceOfDeposit", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
+        {"constant": false, "inputs": [{"name": "amount", "type": "uint256"}], "name": "depositToAddress", "outputs": [], "type": "function"},
+        {"constant": false, "inputs": [{"name": "amount", "type": "uint256"}], "name": "withdraw", "outputs": [], "type": "function"},
+        {"constant": false, "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "transferInBank", "outputs": [], "type": "function"},
+        {"constant": false, "inputs": [{"name": "amount", "type": "uint256"}], "name": "approveBank", "outputs": [], "type": "function"}
+    ];
+
+    const TOKEN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+    const BANK_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+
+    const CHAINS = {
+        '1': { name: 'Ethereum Mainnet', rpc: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID', chainId: '0x1', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, explorer: 'https://etherscan.io' },
+        '137': { name: 'Polygon Mainnet', rpc: 'https://polygon-rpc.com', chainId: '0x89', nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 }, explorer: 'https://polygonscan.com' },
+        '56': { name: 'BNB Chain', rpc: 'https://bsc-dataseed.binance.org', chainId: '0x38', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, explorer: 'https://bscscan.com' },
+        '31337': { name: 'Hardhat Local', rpc: 'http://127.0.0.1:8545', chainId: '0x7a69', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, explorer: '' }
+    };
+
+    const App = () => {
+        const [account, setAccount] = useState(null);
+        const [chainId, setChainId] = useState(null);
+        const [web3, setWeb3] = useState(null);
+        const [error, setError] = useState(null);
+        const [walletBalance, setWalletBalance] = useState(null);
+        const [bankBalance, setBankBalance] = useState(null);
+        const [tokenSymbol, setTokenSymbol] = useState(null);
+        const [amount, setAmount] = useState('');
+        const [toAddress, setToAddress] = useState('');
+        const [allowance, setAllowance] = useState(null);
+
+        useEffect(() => {
+            if (window.ethereum) {
+                const web3Instance = new Web3(window.ethereum);
+                setWeb3(web3Instance);
+
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    setAccount(accounts[0] || null);
+                    if (accounts[0]) fetchData(web3Instance, accounts[0]);
+                });
+
+                window.ethereum.on('chainChanged', (newChainId) => {
+                    setChainId(newChainId);
+                    if (account) fetchData(web3Instance, account);
+                });
+
+                web3Instance.eth.getChainId().then(setChainId);
+            } else {
+                setError('请安装 MetaMask 钱包');
+            }
+        }, []);
+
+        const fetchData = async (web3Instance, userAccount) => {
+            try {
+                const tokenContract = new web3Instance.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
+                const bankContract = new web3Instance.eth.Contract(BANK_ABI, BANK_ADDRESS);
+
+                const walletBal = await tokenContract.methods.balanceOf(userAccount).call();
+                const bankBal = await bankContract.methods.balanceOfDeposit(userAccount).call();
+                const symbol = await tokenContract.methods.symbol().call();
+                const allowanceBal = await tokenContract.methods.allowance(userAccount, BANK_ADDRESS).call();
+
+                setWalletBalance(web3Instance.utils.fromWei(walletBal, 'ether'));
+                setBankBalance(web3Instance.utils.fromWei(bankBal, 'ether'));
+                setTokenSymbol(symbol);
+                setAllowance(web3Instance.utils.fromWei(allowanceBal, 'ether'));
+            } catch (err) {
+                setError('获取数据失败: ' + err.message);
+            }
+        };
+
+        const connectWallet = async () => {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    setAccount(accounts[0]);
+                    setError(null);
+                    fetchData(web3, accounts[0]);
+                } catch (err) {
+                    setError('连接钱包失败: ' + err.message);
+                }
+            }
+        };
+
+        const disconnectWallet = () => {
+            setAccount(null);
+            setWalletBalance(null);
+            setBankBalance(null);
+            setTokenSymbol(null);
+            setAllowance(null);
+            setError('已断开连接，请在 MetaMask 中确认断开');
+        };
+
+        const switchChain = async (chainId) => {
+            try {
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] });
+                setError(null);
+            } catch (err) {
+                if (err.code === 4902) {
+                    const chain = CHAINS[parseInt(chainId, 16)];
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{ chainId, chainName: chain.name, rpcUrls: [chain.rpc], nativeCurrency: chain.nativeCurrency, blockExplorerUrls: chain.explorer ? [chain.explorer] : [] }]
+                        });
+                    } catch (addErr) {
+                        setError('添加网络失败: ' + addErr.message);
+                    }
+                } else {
+                    setError('切换网络失败: ' + err.message);
+                }
+            }
+        };
+
+        const approve = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            try {
+                const tokenContract = new web3.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
+                const amountInZ0 = amount;
+                const amountWeiForDisplay = web3.utils.toWei(amountInZ0, 'ether');
+                const amountWeiForContract = BigInt(amountInZ0);
+
+                const currentAllowance = await tokenContract.methods.allowance(account, BANK_ADDRESS).call();
+                console.log('Approve - Current Allowance (Wei):', currentAllowance, 'Current Allowance (Z0):', web3.utils.fromWei(currentAllowance, 'ether'), 'Requested Amount (Wei for Display):', amountWeiForDisplay, 'Requested Amount (Z0):', amountInZ0, 'Requested Amount (for Contract):', amountWeiForContract.toString());
+
+                if (BigInt(currentAllowance) < BigInt(amountWeiForDisplay)) {
+                    setError(`授权金额不足，当前: ${web3.utils.fromWei(currentAllowance, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+
+                const tx = await tokenContract.methods.approve(BANK_ADDRESS, amountWeiForContract.toString()).send({ from: account });
+                console.log('Approve Transaction Hash:', tx.transactionHash);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 等待链上状态同步
+                fetchData(web3, account);
+                setError('授权成功');
+            } catch (err) {
+                console.error('Approve Error:', err);
+                setError('授权失败: ' + (err.message || '未知错误') + (err.data ? ` - ${JSON.stringify(err.data)}` : ''));
+            }
+        };
+
+        const deposit = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            try {
+                const tokenContract = new web3.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
+                const amountInZ0 = amount;
+                const amountWeiForDisplay = web3.utils.toWei(amountInZ0, 'ether');
+                const amountWeiForContract = BigInt(amountInZ0);
+
+                const currentAllowance = await tokenContract.methods.allowance(account, BANK_ADDRESS).call();
+                const walletBal = await tokenContract.methods.balanceOf(account).call();
+                const ethBalance = await web3.eth.getBalance(account);
+                console.log('Deposit - Current Allowance (Wei):', currentAllowance, 'Current Allowance (Z0):', web3.utils.fromWei(currentAllowance, 'ether'), 'Requested Amount (Wei for Display):', amountWeiForDisplay, 'Requested Amount (Z0):', amountInZ0, 'Requested Amount (for Contract):', amountWeiForContract.toString(), 'Wallet Balance:', web3.utils.fromWei(walletBal, 'ether'), 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
+
+                if (BigInt(currentAllowance) < BigInt(amountWeiForDisplay)) {
+                    setError(`授权金额不足，当前: ${web3.utils.fromWei(currentAllowance, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+                if (BigInt(walletBal) < BigInt(amountWeiForDisplay)) {
+                    setError(`钱包余额不足，当前: ${web3.utils.fromWei(walletBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+                if (BigInt(ethBalance) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
+                    setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
+                    return;
+                }
+
+                const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
+                console.log("start .....");
+                const tx = await bankContract.methods.depositToAddress(amountWeiForContract.toString()).send({ from: account, gas: 300000 });
+                console.log('Deposit Transaction Hash:', tx.transactionHash);
+                fetchData(web3, account);
+                setError('存款成功');
+            } catch (err) {
+                console.error('Deposit Error:', err);
+                setError('存款失败: ' + (err.message || '未知错误') + (err.data ? ` - ${JSON.stringify(err.data)}` : ''));
+            }
+        };
+
+        const withdraw = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            try {
+                const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
+                const amountInZ0 = amount;
+                const amountWeiForDisplay = web3.utils.toWei(amountInZ0, 'ether');
+                const amountWeiForContract = BigInt(amountInZ0);
+
+                const bankBal = await bankContract.methods.balanceOfDeposit(account).call();
+                const ethBalance = await web3.eth.getBalance(account);
+                console.log('Withdraw - Bank Balance:', web3.utils.fromWei(bankBal, 'ether'), 'Requested Amount (Wei for Display):', amountWeiForDisplay, 'Requested Amount (Z0):', amountInZ0, 'Requested Amount (for Contract):', amountWeiForContract.toString(), 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
+
+                if (BigInt(bankBal) < BigInt(amountWeiForDisplay)) {
+                    setError(`银行存款不足，当前: ${web3.utils.fromWei(bankBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+                if (BigInt(ethBalance) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
+                    setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
+                    return;
+                }
+
+                const tx = await bankContract.methods.withdraw(amountWeiForContract.toString()).send({ from: account, gas: 300000 });
+                console.log('Withdraw Transaction Hash:', tx.transactionHash);
+                fetchData(web3, account);
+                setError('取款成功');
+            } catch (err) {
+                console.error('Withdraw Error:', err);
+                setError('取款失败: ' + (err.message || '未知错误') + (err.data ? ` - ${JSON.stringify(err.data)}` : ''));
+            }
+        };
+
+        const transferInBank = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            if (!web3.utils.isAddress(toAddress)) {
+                setError('请输入有效目标地址');
+                return;
+            }
+            try {
+                const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
+                const amountInZ0 = amount;
+                const amountWeiForDisplay = web3.utils.toWei(amountInZ0, 'ether');
+                const amountWeiForContract = BigInt(amountInZ0);
+
+                const bankBal = await bankContract.methods.balanceOfDeposit(account).call();
+                const ethBalance = await web3.eth.getBalance(account);
+                console.log('TransferInBank - Bank Balance:', web3.utils.fromWei(bankBal, 'ether'), 'Requested Amount (Wei for Display):', amountWeiForDisplay, 'Requested Amount (Z0):', amountInZ0, 'Requested Amount (for Contract):', amountWeiForContract.toString(), 'To Address:', toAddress, 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
+
+                if (BigInt(bankBal) < BigInt(amountWeiForDisplay)) {
+                    setError(`银行存款不足，当前: ${web3.utils.fromWei(bankBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+                if (BigInt(ethBalance) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
+                    setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
+                    return;
+                }
+
+                const tx = await bankContract.methods.transferInBank(toAddress, amountWeiForContract.toString()).send({ from: account, gas: 300000 });
+                console.log('TransferInBank Transaction Hash:', tx.transactionHash);
+                fetchData(web3, account);
+                setError('银行转账成功');
+            } catch (err) {
+                console.error('TransferInBank Error:', err);
+                setError('银行转账失败: ' + (err.message || '未知错误') + (err.data ? ` - ${JSON.stringify(err.data)}` : ''));
+            }
+        };
+
+        const approveBank = async () => {
+            if (!web3 || !account) return;
+            if (!amount || parseFloat(amount) <= 0) {
+                setError('请输入有效金额');
+                return;
+            }
+            try {
+                const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
+                const amountInZ0 = amount;
+                const amountWeiForDisplay = web3.utils.toWei(amountInZ0, 'ether');
+                const amountWeiForContract = BigInt(amountInZ0);
+
+                const currentAllowance = await web3.eth.call({
+                    to: TOKEN_ADDRESS,
+                    data: web3.eth.abi.encodeFunctionCall({
+                        name: 'allowance',
+                        type: 'function',
+                        inputs: [{ type: 'address', name: '_owner' }, { type: 'address', name: '_spender' }]
+                    }, [account, BANK_ADDRESS])
+                });
+                const allowanceInWei = BigInt(currentAllowance);
+                console.log('ApproveBank - Current Allowance (Wei):', allowanceInWei, 'Current Allowance (Z0):', web3.utils.fromWei(allowanceInWei.toString(), 'ether'), 'Requested Amount (Wei for Display):', amountWeiForDisplay, 'Requested Amount (Z0):', amountInZ0, 'Requested Amount (for Contract):', amountWeiForContract.toString());
+
+                if (allowanceInWei < BigInt(amountWeiForDisplay)) {
+                    setError(`授权金额不足，当前: ${web3.utils.fromWei(allowanceInWei.toString(), 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
+                    return;
+                }
+
+                const tx = await bankContract.methods.approveBank(amountWeiForContract.toString()).send({ from: account, gas: 300000 });
+                console.log('ApproveBank Transaction Hash:', tx.transactionHash);
+                fetchData(web3, account);
+                setError('银行授权成功');
+            } catch (err) {
+                console.error('ApproveBank Error:', err);
+                setError('银行授权失败: ' + (err.message || '未知错误') + (err.data ? ` - ${JSON.stringify(err.data)}` : ''));
+            }
+        };
+
+        return (
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+                <h1 className="text-2xl font-bold mb-4 text-center">多链钱包连接</h1>
+
+                {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
+
+                {!account ? (
+                    <button onClick={connectWallet} className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">连接钱包</button>
+                ) : (
+                    <div>
+                        <p className="text-sm mb-2"><span className="font-semibold">账户:</span> <span className="break-all">{account}</span></p>
+                        <p className="text-sm mb-2"><span className="font-semibold">当前链:</span> {chainId ? CHAINS[parseInt(chainId, 16)]?.name || '未知链' : '未连接'}</p>
+                        {walletBalance && (
+                            <p className="text-sm mb-2"><span className="font-semibold">钱包余额:</span> {walletBalance} {tokenSymbol}</p>
+                        )}
+                        {bankBalance && (
+                            <p className="text-sm mb-2"><span className="font-semibold">银行存款:</span> {bankBalance} {tokenSymbol}</p>
+                        )}
+                        {allowance !== null && (
+                            <p className="text-sm mb-2"><span className="font-semibold">授权金额:</span> {allowance} {tokenSymbol}</p>
+                        )}
+
+                        <div className="mb-4">
+                            <input
+                                type="number"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                placeholder="输入金额 (以太)"
+                                className="w-full p-2 mb-2 border rounded"
+                            />
+                            <button onClick={approve} className="w-full bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 mb-2">授权</button>
+                            <button onClick={approveBank} className="w-full bg-yellow-600 text-white py-2 px-4 rounded hover:bg-yellow-700 mb-2">银行授权</button>
+                            <button onClick={deposit} className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-2">存款</button>
+                            <button onClick={withdraw} className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 mb-2">取款</button>
+                        </div>
+
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                value={toAddress}
+                                onChange={(e) => setToAddress(e.target.value)}
+                                placeholder="转账目标地址"
+                                className="w-full p-2 mb-2 border rounded"
+                            />
+                            <button onClick={transferInBank} className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">银行转账</button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            {Object.keys(CHAINS).map((id) => (
+                                <button
+                                    key={id}
+                                    onClick={() => switchChain(CHAINS[id].chainId)}
+                                    className={`py-2 px-4 rounded text-sm ${chainId === CHAINS[id].chainId ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                >
+                                    切换到 {CHAINS[id].name}
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={disconnectWallet} className="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">断开连接</button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
 </body>
 </html>
