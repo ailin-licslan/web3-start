@@ -19,7 +19,7 @@ contract Bank{
     }
     //查询当前合约地址余额
     function balanceOfAddress() public view returns(uint256 balance) {
-        balance = balanceOfDeposit[msg.sender]/ (10**18);
+        balance = balanceOfDeposit[msg.sender];
         //return balance[msg.sender];
     }
     //存款 deposit: 将当前调用者账户的余额转到当前合约的地址(相当于存钱到银行)  

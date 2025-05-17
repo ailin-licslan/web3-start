@@ -2,6 +2,11 @@ import React from "react";
 const { useState, useEffect } = React;
 // @ts-ignore
 
+
+
+
+
+
 import {Web3} from 'web3';
 
 const ZERO20_ABI = [
@@ -21,8 +26,8 @@ const BANK_ABI = [
     {"inputs":[],"name":"token","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
 ];
 
-const TOKEN_ADDRESS = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
-const BANK_ADDRESS = '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
+const TOKEN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const BANK_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
 
 const CHAINS = {
     '1': { name: 'Ethereum Mainnet', rpc: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID', chainId: '0x1', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, explorer: 'https://etherscan.io' },
@@ -30,6 +35,7 @@ const CHAINS = {
     '56': { name: 'BNB Chain', rpc: 'https://bsc-dataseed.binance.org', chainId: '0x38', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, explorer: 'https://bscscan.com' },
     '31337': { name: 'Hardhat 本地', rpc: 'http://127.0.0.1:8545', chainId: '0x7a69', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, explorer: '' }
 };
+
 
 // @ts-ignore
 const AppStarting = () => {
@@ -47,6 +53,7 @@ const AppStarting = () => {
     useEffect(() => {
         if (window.ethereum) {
             const web3Instance = new Web3(window.ethereum);
+            // @ts-ignore
             setWeb3(web3Instance);
 
             // @ts-ignore
@@ -60,9 +67,12 @@ const AppStarting = () => {
             // @ts-ignore
             window.ethereum.on('chainChanged', (newChainId) => {
                 setChainId(newChainId);
-                if (account) fetchData(web3Instance, account);
+                if (account) { // @ts-ignore
+                    fetchData(web3Instance, account).then(r => {});
+                }
             });
 
+            // @ts-ignore
             web3Instance.eth.getChainId().then(setChainId);
         } else {
             // @ts-ignore
@@ -70,22 +80,23 @@ const AppStarting = () => {
         }
     }, []);
 
+
+    //update data
     const fetchData = async (web3Instance: null, userAccount: never) => {
         try {
+
             // @ts-ignore
             const tokenContract = new web3Instance.eth.Contract(ZERO20_ABI, TOKEN_ADDRESS);
             // @ts-ignore
             const bankContract = new web3Instance.eth.Contract(BANK_ABI, BANK_ADDRESS);
-
+            //錢包餘額
             const walletBal = await tokenContract.methods.balanceOf(userAccount).call();
-            console.log("xxxxxxxxxxxxxxx1walletBal is ================>",walletBal)
+            //銀行存款
             const bankBal = await bankContract.methods.balanceOfDeposit(userAccount).call();
-            console.log("xxxxxxxxxxxxxxx2bankBal is ================>",bankBal)
+            //ETH
             const symbol = await tokenContract.methods.symbol().call();
-            console.log("xxxxxxxxxxxxxxx3symbol is ================>",symbol)
+            //剩餘授權金額
             const allowanceBal = await tokenContract.methods.allowance(userAccount, BANK_ADDRESS).call();
-            console.log("xxxxxxxxxxxxxxx4allowanceBal is ================>",allowanceBal)
-
             // @ts-ignore
             setWalletBalance(web3Instance.utils.fromWei(walletBal, 'ether'));
             // @ts-ignore
@@ -93,7 +104,12 @@ const AppStarting = () => {
             // @ts-ignore
             setTokenSymbol(symbol==="Z0"?"ETH":"$");
             // @ts-ignore
-            setAllowance(web3Instance.utils.fromWei(allowanceBal, 'ether') * 10**18);
+            setAllowance(web3Instance.utils.fromWei(allowanceBal, 'ether'));
+
+            console.log("xxxxxxxxxxxxxxx1walletBal is ================>",walletBal)
+            console.log("xxxxxxxxxxxxxxx2bankBal is ================>",bankBal)
+            console.log("xxxxxxxxxxxxxxx4allowanceBal is ================>",allowanceBal)
+
         } catch (err) {
             // @ts-ignore
             setError('获取数据失败: ' + err.message);
@@ -154,9 +170,9 @@ const AppStarting = () => {
     };
 
     //授权
-
     // @ts-ignore
     const approve = async () => {
+        debugger
         if (!web3 || !account) return;
         if (!amount || parseFloat(amount) <= 0) {
             // @ts-ignore
@@ -172,7 +188,7 @@ const AppStarting = () => {
             console.log("the Approve amountWei is ", amountWei, "account is ", account)
             //授权给银行地址可以使用多少金额
             //const tx = await tokenContract.methods.approve(BANK_ADDRESS, amountWei/(10 ** 18)).send({ from: account });
-            const tx = await tokenContract.methods.approve(BANK_ADDRESS, amount).send({ from: account });
+            const tx = await tokenContract.methods.approve(BANK_ADDRESS, amountWei).send({ from: account });
             console.log('Approve Transaction Hash:', tx.transactionHash);
             await new Promise(resolve => setTimeout(resolve, 1000)); // 等待链上状态同步
             await fetchData(web3, account);
@@ -184,6 +200,7 @@ const AppStarting = () => {
             setError('授权失败: ' + (err.message || '未知错误'));
         }
     };
+
 
     //存款
     const deposit = async () => {
@@ -202,7 +219,7 @@ const AppStarting = () => {
 
             //要存多少钱
             // @ts-ignore
-            const amountWei = web3.utils.toWei(amount, 'ether');
+            const amountWei = web3.utils.toWei(amount, 'ether'); // x eth * 10 ** 18
 
             //查询向银行合约地址已经授权的金额
             const currentAllowance = await tokenContract.methods.allowance(account, BANK_ADDRESS).call();
@@ -215,42 +232,44 @@ const AppStarting = () => {
             // @ts-ignore
             const ethBalance = await web3.eth.getBalance(account);
             // @ts-ignore
-            const allowanceInEther = web3.utils.fromWei(currentAllowance, 'ether');  // x eth * 10 ** 18
-            //const amountWeiInEther = web3.utils.fromWei(amountWei, 'ether');
+            //const ethBalanceWei = web3.utils.toWei(ethBalance);
+            // @ts-ignore  wei====> eth   / (10 ** 18)
+            const allowanceInEther = web3.utils.fromWei(currentAllowance, 'ether');  // x eth /( 10 ** 18)
+            // @ts-ignore  eth====> wei  * (10 ** 18)
+            const currentAllowanceWei = web3.utils.toWei(currentAllowance, 'ether');  // x eth * 10 ** 18
+
             //console.log('Deposit - Current Allowance (Wei):', currentAllowance, 'Current Allowance (Z0):', allowanceInEther, 'Requested Amount (Wei):', amountWei, 'Requested Amount (Z0):', amountWeiInEther, 'Wallet Balance:', web3.utils.fromWei(walletBal, 'ether'), 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
 
-            console.log("currentAllowance",currentAllowance,"amountWei",amountWei )
+            console.log("currentAllowanceWei:",currentAllowanceWei,"amountWei:",amountWei ,"walletBal:", walletBal, "ethBalance:",ethBalance)
 
             //已经运行被授权可以动用的金额要大于等于存款金额
-            if (BigInt(currentAllowance) < BigInt(amountWei/(10 ** 18))) {
+            if (BigInt(currentAllowanceWei) < BigInt(amountWei)) {
                 // @ts-ignore
                 setError(`授权金额不足，当前: ${allowanceInEther} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                 return;
             }
             console.log("2222222222222currentAllowance",currentAllowance,"amountWei",amountWei )
-            if (BigInt(walletBal/(10 ** 18)) < BigInt(amountWei/(10 ** 18))) {
+
+            if (BigInt(walletBal) < BigInt(amountWei)) {
                 // @ts-ignore
                 setError(`钱包余额不足，当前: ${web3.utils.fromWei(walletBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                 return;
             }
             // @ts-ignore
-            if (BigInt(ethBalance/(10 ** 18)) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
+            if (BigInt(ethBalance) < BigInt(web3.utils.toWei('0.01', 'ether'))) {
                 // @ts-ignore
                 setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
                 return;
             }
             console.log("3333333333333333currentAllowance",currentAllowance,"amountWei",amountWei )
 
-
-            //bank 合约对象
+            //BANK合约对象
             // @ts-ignore
             const bankContract = new web3.eth.Contract(BANK_ABI, BANK_ADDRESS);
             console.log("start .....", account)
-            const a = amountWei/(10 ** 18);
-            console.log("a .....", a)
 
-            //bank合约调用存款的方法
-            const tx = await bankContract.methods.depositToAddress(a).send({ from: account, gas: 3000000 });
+            //BANK合约调用存款的方法
+            const tx = await bankContract.methods.depositToAddress(amountWei).send({ from: account, gas: 3000000 });
             //const tx = await bankContract.methods.depositToAddress(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
             console.log("end .....")
             console.log('Deposit Transaction Hash:', tx.transactionHash);
@@ -279,12 +298,14 @@ const AppStarting = () => {
             const amountWei = web3.utils.toWei(amount, 'ether');
             const bankBal = await bankContract.methods.balanceOfDeposit(account).call();
             // @ts-ignore
+            const bankBalWei =  web3.utils.toWei(bankBal, 'ether');
+            // @ts-ignore
             const ethBalance = await web3.eth.getBalance(account);
             // @ts-ignore
             console.log('Withdraw - Bank Balance:', web3.utils.fromWei(bankBal, 'ether'), 'Requested Amount:', amount, 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
 
             //银行的存款要大于等于要取的钱
-            if (BigInt(bankBal) < BigInt(amountWei/(10 ** 18))) {
+            if (BigInt(bankBalWei) < BigInt(amountWei)) {
                 // @ts-ignore
                 setError(`银行存款不足，当前: ${web3.utils.fromWei(bankBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                 return;
@@ -295,8 +316,7 @@ const AppStarting = () => {
                 setError(`ETH 余额不足以支付 Gas 费用，当前: ${web3.utils.fromWei(ethBalance, 'ether')} ETH`);
                 return;
             }
-
-            const tx = await bankContract.methods.withdraw(amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
+            const tx = await bankContract.methods.withdraw(amountWei).send({ from: account, gas: 300000 });
             console.log('Withdraw Transaction Hash:', tx.transactionHash);
             await fetchData(web3, account);
             // @ts-ignore
@@ -329,13 +349,15 @@ const AppStarting = () => {
             // @ts-ignore
             const amountWei = web3.utils.toWei(amount, 'ether');
             const bankBal = await bankContract.methods.balanceOfDeposit(account).call();
+            // @ts-ignore
+            const bankBalWei =  web3.utils.toWei(bankBal, 'ether');
             console.log("bankBal is ", bankBal, "amountWei is ", amountWei)
             // @ts-ignore
             const ethBalance = await web3.eth.getBalance(account);
             // @ts-ignore
             console.log('TransferInBank - Bank Balance:', web3.utils.fromWei(bankBal, 'ether'), 'Requested Amount:', amount, 'To Address:', toAddress, 'ETH Balance:', web3.utils.fromWei(ethBalance, 'ether'));
 
-            if (BigInt(bankBal) < BigInt(amountWei/(10 ** 18))) {
+            if (BigInt(bankBalWei) < BigInt(amountWei)) {
                 // @ts-ignore
                 setError(`银行存款不足，当前: ${web3.utils.fromWei(bankBal, 'ether')} ${tokenSymbol}, 所需: ${amount} ${tokenSymbol}`);
                 return;
@@ -347,9 +369,9 @@ const AppStarting = () => {
                 return;
             }
 
-            const tx = await bankContract.methods.transferInBank(toAddress, amountWei/(10 ** 18)).send({ from: account, gas: 300000 });
+            const tx = await bankContract.methods.transferInBank(toAddress, amountWei).send({ from: account, gas: 300000 });
             console.log('TransferInBank Transaction Hash:', tx.transactionHash);
-            fetchData(web3, account);
+            await fetchData(web3, account);
             // @ts-ignore
             setError('银行转账成功');
         } catch (err) {
@@ -360,9 +382,6 @@ const AppStarting = () => {
     };
 
 
-    // @ts-ignore
-    // @ts-ignore
-    // @ts-ignore
     return (
         <div id="root" className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
@@ -376,7 +395,7 @@ const AppStarting = () => {
             ) : (
                 <div>
                     <p className="text-sm mb-2"><span className="font-semibold">账户:</span> <span className="break-all">{account}</span></p>
-                    <p className="text-sm mb-2"><span className="font-semibold">当前链:</span> {chainId ? CHAINS[parseInt(chainId, 16)]?.name || 'HARDHAT' : '未连接'}</p>
+                    <p className="text-sm mb-2"><span className="font-semibold">当前链:</span> {chainId ? CHAINS[parseInt(chainId, 16)] && CHAINS[parseInt(chainId, 16)].name ? CHAINS[parseInt(chainId, 16)].name : 'HARDHAT' : '未连接'}</p>
                     {walletBalance && (
                         <p className="text-sm mb-2"><span className="font-semibold">钱包余额:</span> {walletBalance} {tokenSymbol}</p>
                     )}

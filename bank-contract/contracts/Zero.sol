@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 //ERC20 同质化代币生产 
 contract Zero is ERC20{
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_){
-        //生产1000枚代币  Z0
+        //生产1000枚代币 比如說 ETH
         _mint(msg.sender, 1000*10**18);
     }
 
