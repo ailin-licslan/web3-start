@@ -46,6 +46,8 @@ In a new terminal:
 ```cmd
 npx hardhat ignition deploy ./ignition/modules/DeployZero.js --network localhost
 npx hardhat ignition deploy ./ignition/modules/DeployBank.js --network localhost
+or use one commend below
+npx hardhat run scripts/deploy.js --network localhost
 npx hardhat compile
 ```
 
