@@ -70,15 +70,15 @@ Open `http://localhost:3000` in your browser.
 ## Usage
 1. Connect your wallet (MetaMask or WalletConnect) via the "Connect Wallet" button.
 2. Switch chains using the dropdown (e.g., Hardhat Local, Ethereum Mainnet, Goerli Testnet).
-3. Approve the bank contract to spend your Z0 tokens.
-4. Deposit Z0 tokens to the bank.
-5. Withdraw Z0 tokens from the bank.
-6. Transfer Z0 tokens to another account within the bank.
+3. Approve the bank contract to spend your ETH tokens.
+4. Deposit ETH tokens to the bank.
+5. Withdraw ETH tokens from the bank.
+6. Transfer ETH tokens to another account within the bank.
 
 ## Notes
 - Ensure you have sufficient Z0 tokens in your account (minted to the first Hardhat account by default).
 - Replace "YOUR_WALLET_CONNECT_PROJECT_ID" in `WalletConnect.tsx` with your WalletConnect Project ID from `https://cloud.walletconnect.com`.
-- The UI uses Bootstrap for styling.
+- The UI uses tailwindcss for styling.
 
 ## Troubleshooting
 - **Transaction fails**: Check if the account has enough ETH (provided by Hardhat node) and Z0 tokens.

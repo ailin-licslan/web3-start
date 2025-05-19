@@ -22,7 +22,7 @@ main().catch((error) => {
     process.exitCode = 1;
 });
 
-//npx hardhat node  TODO not work yet
+//npx hardhat node   not work yet, pls see /scripts/deploy.js
 //npx hardhat ignition deploy ./ignition/modules/DeployZero.js --network localhost
 //npx hardhat ignition deploy ./ignition/modules/DeployBank.js --network localhost
 //npx hardhat run ./ignition/modules/deploy.js --network localhost
