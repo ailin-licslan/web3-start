@@ -1,6 +1,6 @@
 # Web3 Bank Demo
 
-A simple Web3 application demonstrating a bank smart contract with deposit, withdrawal, and transfer functionalities using Solidity, Hardhat, Ethers.js, and React.
+A simple Web3 application demonstrating a bank smart contract with deposit, withdrawal, and transfer functionalities using Solidity, Hardhat, web3.js/Ethers.js, and React.
 
 ## Prerequisites
 - Node.js (>=23.11.0)
@@ -10,7 +10,7 @@ A simple Web3 application demonstrating a bank smart contract with deposit, with
 
 ## Project Structure
 - **bank-contract**: Hardhat project with smart contracts, deployment scripts, and tests.
-- **bank-client**: React frontend with Ethers.js and WalletConnect, styled with Bootstrap.
+- **bank-client**: React frontend with web3.js/Ethers.js and WalletConnect, styled with tailwindcss.
 
 ## Setup
 
