@@ -83,7 +83,7 @@ Open `http://localhost:3000` in your browser.
 - The UI uses tailwindcss for styling.
 
 ## Troubleshooting
-- **Transaction fails**: Check if the account has enough ETH (provided by Hardhat node) and Z0 tokens.
+- **Transaction fails**: Check if the account has enough ETH (provided by Hardhat node) and ETH(if you mint token called ETH) tokens.
 - **Approval issues**: Ensure you approve the bank contract before depositing.
 - **Network errors**: Verify the Hardhat node is running and MetaMask is connected to the correct network.
 - **Dependency warnings**: Use `--legacy-peer-deps` if npm install fails due to peer conflicts.
